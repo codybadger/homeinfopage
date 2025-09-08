@@ -5,7 +5,7 @@ const CONFIG = {
     // Weather API Configuration
     // Get your free API key from: https://openweathermap.org/api
     WEATHER: {
-        API_KEY: '5ea7febbcf72c4a026c3a4602f6e9df2',
+        API_KEY: 'YOUR_WEATHER_API_KEY',
         CITY: 'Twin Lakes,US', // e.g., 'London,UK' or 'New York,US'
         UNITS: 'imperial' // 'metric' for Celsius, 'imperial' for Fahrenheit
     },
@@ -13,15 +13,15 @@ const CONFIG = {
     // Google APIs Configuration
     // Set up at: https://console.developers.google.com/
     GOOGLE: {
-        CLIENT_ID: '849654326884-9qpjrjcrgostepshecbe2b4g7tpfj57l.apps.googleusercontent.com',
-        API_KEY: 'AIzaSyCV1wtdqFe0mJIdA9C4QaVIFKFQGjUxYSU',
+        CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID',
+        API_KEY: 'YOUR_GOOGLE_API_KEY',
         
         // Calendar settings
         CALENDAR_ID: 'primary', // or your specific calendar ID
         
         // Sheets settings
         SHEETS: {
-            SPREADSHEET_ID: '1EBw7W6lKfYx_VT3-hAZ5jvk3CR32dKXkAx6x-vCuESY',
+            SPREADSHEET_ID: 'YOUR_GOOGLE_SHEETS_ID',
             RANGE: 'Sheet1!A:Z', // Range to read from your sheet
             USE_HEADERS: true, // Whether first row contains headers
             MAX_ROWS: 100 // Maximum rows to display
@@ -31,7 +31,7 @@ const CONFIG = {
     // Todoist API Configuration (Recommended)
     // Get your API token from: https://todoist.com/prefs/integrations
     TODOIST: {
-        API_TOKEN: 'eef65c3c68f28efa33bbe62c755de0359a8db89a',
+        API_TOKEN: 'YOUR_TODOIST_API_TOKEN',
         API_URL: 'https://api.todoist.com/rest/v2/',
         PROJECT_ID: null // Leave null to get all tasks, or specify a project ID
     },
