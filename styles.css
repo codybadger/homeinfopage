@@ -1,0 +1,445 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #4a5bb8 0%, #5a3d7a 100%);
+    min-height: 100vh;
+    color: #e0e0e0;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 15px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.datetime {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+
+/* Main content grid */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 25px;
+}
+
+/* Card styles */
+.card {
+    background: rgba(20, 20, 20, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #4a5bb8 0%, #5a3d7a 100%);
+    color: white;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.card-header h2 i {
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+
+.card-content {
+    padding: 25px;
+}
+
+/* Weather info in header */
+.header .weather-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.header .weather-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header .weather-icon {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.header .weather-temp {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.header .weather-desc {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.header .weather-details {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.header .weather-detail {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.header .weather-detail-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.header .weather-detail-value {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Calendar card specific */
+.calendar-info {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.calendar-event {
+    background: rgba(74, 91, 184, 0.15);
+    border-left: 3px solid #4a5bb8;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-radius: 0 6px 6px 0;
+    transition: background-color 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.calendar-event:hover {
+    background: rgba(74, 91, 184, 0.2);
+}
+
+.event-details {
+    font-weight: 500;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.event-date-time {
+    color: #b0b0b0;
+    font-weight: 500;
+}
+
+.event-calendar {
+    font-weight: 600;
+}
+
+.event-title {
+    color: #e0e0e0;
+    font-weight: 500;
+}
+
+.no-events {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Tasks card specific */
+.tasks-info {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-checkbox {
+    margin-right: 12px;
+    transform: scale(1.2);
+}
+
+.task-text {
+    flex: 1;
+    color: #e0e0e0;
+}
+
+.task-completed {
+    text-decoration: line-through;
+    color: #888;
+}
+
+.task-due {
+    font-size: 0.9rem;
+    color: #b0b0b0;
+    margin-left: auto;
+}
+
+.no-tasks {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Navigation card */
+.navigation-card {
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+.nav-button {
+    background: linear-gradient(135deg, #4a5bb8 0%, #5a3d7a 100%);
+    color: white;
+    border: none;
+    padding: 20px 40px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    min-width: 44px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.nav-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(74, 91, 184, 0.3);
+}
+
+.nav-button i {
+    font-size: 1.1rem;
+}
+
+/* Loading states */
+.loading {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+}
+
+.loading::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #667eea;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error states */
+.error {
+    color: #e74c3c;
+    text-align: center;
+    padding: 20px;
+    background: rgba(231, 76, 60, 0.1);
+    border-radius: 10px;
+    border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+/* General iPad optimization */
+@media (max-width: 1024px) and (min-width: 768px) {
+    .container {
+        padding: 20px;
+        max-width: 100%;
+    }
+    
+    .main-content {
+        grid-template-columns: 1fr;
+        gap: 25px;
+    }
+    
+    .card {
+        border-radius: 25px;
+    }
+    
+    .card-header {
+        padding: 25px 30px;
+    }
+    
+    .card-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .card-content {
+        padding: 30px;
+    }
+    
+    .calendar-info {
+        max-height: 500px;
+    }
+    
+    .calendar-event {
+        padding: 12px 15px;
+        margin-bottom: 8px;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    .event-details {
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+    
+    .tasks-info {
+        max-height: 500px;
+    }
+    
+    .task-item {
+        padding: 15px 0;
+    }
+    
+    .task-checkbox {
+        transform: scale(1.4);
+        margin-right: 15px;
+    }
+    
+    .task-text {
+        font-size: 1.1rem;
+    }
+    
+    .nav-button {
+        padding: 25px 50px;
+        font-size: 1.4rem;
+        border-radius: 20px;
+        margin-top: 30px;
+    }
+    
+    .nav-button i {
+        font-size: 1.3rem;
+    }
+}
+
+/* iPad vertical orientation optimization */
+@media (max-width: 1024px) and (min-width: 768px) and (orientation: portrait) {
+    .header {
+        padding: 20px 25px;
+        margin-bottom: 25px;
+    }
+    
+    .datetime {
+        font-size: 1.3rem;
+        margin-bottom: 8px;
+    }
+    
+    .header .weather-info {
+        font-size: 1.1rem;
+        gap: 20px;
+        margin-top: 15px;
+    }
+    
+    .header .weather-temp {
+        font-size: 1.3rem;
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .main-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .weather-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-content {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        padding: 20px;
+    }
+    
+    .header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .datetime {
+        font-size: 1rem;
+    }
+    
+    .nav-button {
+        padding: 15px 30px;
+        font-size: 1.1rem;
+    }
+}

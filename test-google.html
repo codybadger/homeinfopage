@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google API Test</title>
+</head>
+<body>
+    <h1>Google API Test</h1>
+    <div id="result"></div>
+    <button onclick="testGoogleAPIs()">Test Google APIs</button>
+    
+    <script src="config.js"></script>
+    <script>
+        function testGoogleAPIs() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing Google APIs...</p>';
+            
+            // Check if CONFIG is loaded
+            if (!window.CONFIG) {
+                resultDiv.innerHTML += '<p style="color: red;">❌ CONFIG not loaded</p>';
+                return;
+            }
+            
+            resultDiv.innerHTML += '<p style="color: green;">✅ CONFIG loaded</p>';
+            resultDiv.innerHTML += `<p>Client ID: ${window.CONFIG.GOOGLE.CLIENT_ID}</p>`;
+            resultDiv.innerHTML += `<p>API Key: ${window.CONFIG.GOOGLE.API_KEY}</p>`;
+            
+            // Check if gapi is available
+            if (typeof gapi === 'undefined') {
+                resultDiv.innerHTML += '<p style="color: red;">❌ Google API (gapi) not loaded</p>';
+                resultDiv.innerHTML += '<p>Loading Google API...</p>';
+                
+                // Load Google API
+                const script = document.createElement('script');
+                script.src = 'https://apis.google.com/js/api.js';
+                script.onload = () => {
+                    resultDiv.innerHTML += '<p style="color: green;">✅ Google API loaded</p>';
+                    testGoogleAPIs();
+                };
+                script.onerror = () => {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ Failed to load Google API</p>';
+                };
+                document.head.appendChild(script);
+                return;
+            }
+            
+            resultDiv.innerHTML += '<p style="color: green;">✅ Google API (gapi) loaded</p>';
+            
+            // Check if gapi.client is initialized
+            if (!gapi.client) {
+                resultDiv.innerHTML += '<p style="color: orange;">⚠️ Google API client not initialized</p>';
+                resultDiv.innerHTML += '<p>Initializing Google API client...</p>';
+                
+                gapi.load('client:auth2', () => {
+                    gapi.client.init({
+                        apiKey: window.CONFIG.GOOGLE.API_KEY,
+                        clientId: window.CONFIG.GOOGLE.CLIENT_ID,
+                        discoveryDocs: [
+                            'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
+                            'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'
+                        ],
+                        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly'
+                    }).then(() => {
+                        resultDiv.innerHTML += '<p style="color: green;">✅ Google API client initialized</p>';
+                        resultDiv.innerHTML += '<p>Google APIs are ready!</p>';
+                    }).catch(error => {
+                        resultDiv.innerHTML += `<p style="color: red;">❌ Failed to initialize Google API client: ${error.message}</p>`;
+                    });
+                });
+            } else {
+                resultDiv.innerHTML += '<p style="color: green;">✅ Google API client initialized</p>';
+            }
+        }
+        
+        // Auto-run test when page loads
+        window.addEventListener('load', testGoogleAPIs);
+    </script>
+</body>
+</html>
+

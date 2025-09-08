@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Calendars Test</title>
+</head>
+<body>
+    <h1>Your Google Calendars</h1>
+    <div id="result"></div>
+    <button onclick="listCalendars()">List All Calendars</button>
+    
+    <script src="config.js"></script>
+    <script>
+        // Restore Google token from localStorage
+        function restoreGoogleToken() {
+            try {
+                const storedToken = localStorage.getItem('google_access_token');
+                if (storedToken) {
+                    const token = JSON.parse(storedToken);
+                    if (token.expires_at && Date.now() / 1000 < token.expires_at) {
+                        if (window.gapi && window.gapi.client) {
+                            window.gapi.client.setToken(token);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error restoring Google token:', error);
+            }
+        }
+        
+        async function listCalendars() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Loading calendars...</p>';
+            
+            try {
+                // Check if Google API is loaded
+                if (!window.gapi || !window.gapi.client) {
+                    resultDiv.innerHTML = '<p>Loading Google API...</p>';
+                    
+                    const script = document.createElement('script');
+                    script.src = 'https://apis.google.com/js/api.js';
+                    script.onload = () => {
+                        window.gapi.load('client', () => {
+                            window.gapi.client.init({
+                                apiKey: window.CONFIG?.GOOGLE?.API_KEY,
+                                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
+                            }).then(() => {
+                                // Restore token from localStorage
+                                restoreGoogleToken();
+                                listCalendars();
+                            });
+                        });
+                    };
+                    document.head.appendChild(script);
+                    return;
+                }
+                
+                // Restore token from localStorage
+                const storedToken = localStorage.getItem('google_access_token');
+                if (storedToken) {
+                    const token = JSON.parse(storedToken);
+                    if (token.expires_at && Date.now() / 1000 < token.expires_at) {
+                        window.gapi.client.setToken(token);
+                    }
+                }
+                
+                // Check if user is signed in
+                if (!window.gapi.client.getToken()) {
+                    resultDiv.innerHTML = '<p>Please sign in to the main dashboard first, then refresh this page.</p>';
+                    return;
+                }
+                
+                // Get all calendars
+                const response = await window.gapi.client.calendar.calendarList.list();
+                const calendars = response.result.items || [];
+                
+                resultDiv.innerHTML = '<h2>Your Available Calendars:</h2>';
+                
+                calendars.forEach((calendar, index) => {
+                    const isSelected = calendar.id === window.CONFIG?.GOOGLE?.CALENDAR_ID;
+                    resultDiv.innerHTML += `
+                        <div style="border: 1px solid #ccc; padding: 10px; margin: 5px; background: ${isSelected ? '#e8f5e8' : '#f9f9f9'};">
+                            <strong>${calendar.summary}</strong> ${isSelected ? '(Currently Selected)' : ''}<br>
+                            <small>ID: ${calendar.id}</small><br>
+                            <small>Access: ${calendar.accessRole}</small><br>
+                            <small>Color: ${calendar.backgroundColor || 'default'}</small>
+                        </div>
+                    `;
+                });
+                
+                resultDiv.innerHTML += '<p><strong>To change which calendar is displayed, update the CALENDAR_ID in config.js</strong></p>';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Auto-run when page loads
+        window.addEventListener('load', listCalendars);
+    </script>
+</body>
+</html>

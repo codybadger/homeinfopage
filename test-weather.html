@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weather API Test</title>
+</head>
+<body>
+    <h1>Weather API Test</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function testWeather() {
+            const apiKey = '5ea7febbcf72c4a026c3a4602f6e9df2';
+            const city = 'Twin Lakes,US';
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=imperial`;
+            
+            try {
+                console.log('Testing weather API...');
+                console.log('URL:', url);
+                
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Weather data:', data);
+                
+                document.getElementById('result').innerHTML = `
+                    <h2>Weather Test Results:</h2>
+                    <p><strong>Status:</strong> Success!</p>
+                    <p><strong>City:</strong> ${data.name}</p>
+                    <p><strong>Temperature:</strong> ${data.main.temp}°F</p>
+                    <p><strong>Description:</strong> ${data.weather[0].description}</p>
+                    <p><strong>Humidity:</strong> ${data.main.humidity}%</p>
+                `;
+            } catch (error) {
+                console.error('Weather API error:', error);
+                document.getElementById('result').innerHTML = `
+                    <h2>Weather Test Results:</h2>
+                    <p><strong>Status:</strong> Error!</p>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        // Run the test when page loads
+        testWeather();
+    </script>
+</body>
+</html>
+

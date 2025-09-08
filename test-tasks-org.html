@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tasks.org API Test</title>
+</head>
+<body>
+    <h1>Tasks.org API Test</h1>
+    <div id="result"></div>
+    <button onclick="testTasksOrgAPI()">Test Tasks.org API</button>
+    
+    <script src="config.js"></script>
+    <script>
+        async function testTasksOrgAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing Tasks.org API...</p>';
+            
+            try {
+                // Check if CONFIG is loaded
+                if (!window.CONFIG) {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ CONFIG not loaded</p>';
+                    return;
+                }
+                
+                resultDiv.innerHTML += '<p style="color: green;">✅ CONFIG loaded</p>';
+                resultDiv.innerHTML += `<p>API URL: ${window.CONFIG.TASKS_ORG.API_URL}</p>`;
+                resultDiv.innerHTML += `<p>API Key: ${window.CONFIG.TASKS_ORG.API_KEY}</p>`;
+                
+                if (window.CONFIG.TASKS_ORG.API_KEY === 'YOUR_TASKS_ORG_API_KEY') {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ Please configure your Tasks.org API key</p>';
+                    resultDiv.innerHTML += '<p><a href="https://tasks.org/api" target="_blank">Get your API key here</a></p>';
+                    return;
+                }
+                
+                // Test API connection
+                resultDiv.innerHTML += '<p>Testing API connection...</p>';
+                const response = await fetch(`${window.CONFIG.TASKS_ORG.API_URL}tasks`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${window.CONFIG.TASKS_ORG.API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} - ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML += '<p style="color: green;">✅ API connection successful!</p>';
+                resultDiv.innerHTML += `<p>Found ${data.length} tasks</p>`;
+                
+                // Show sample tasks
+                if (data.length > 0) {
+                    resultDiv.innerHTML += '<h3>Sample Tasks:</h3>';
+                    data.slice(0, 5).forEach((task, index) => {
+                        resultDiv.innerHTML += `<p>${index + 1}. ${task.title || task.name} ${task.completed ? '(completed)' : ''}</p>`;
+                    });
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                resultDiv.innerHTML += `<p>Full error: ${JSON.stringify(error, null, 2)}</p>`;
+            }
+        }
+        
+        // Auto-run test when page loads
+        window.addEventListener('load', testTasksOrgAPI);
+    </script>
+</body>
+</html>
+

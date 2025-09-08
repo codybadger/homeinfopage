@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Tasks API Test</title>
+</head>
+<body>
+    <h1>Google Tasks API Test</h1>
+    <div id="result"></div>
+    <button onclick="testTasksAPI()">Test Tasks API</button>
+    
+    <script src="config.js"></script>
+    <script>
+        async function testTasksAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing Google Tasks API...</p>';
+            
+            try {
+                // Check if CONFIG is loaded
+                if (!window.CONFIG) {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ CONFIG not loaded</p>';
+                    return;
+                }
+                
+                resultDiv.innerHTML += '<p style="color: green;">✅ CONFIG loaded</p>';
+                resultDiv.innerHTML += `<p>Tasks List ID: ${window.CONFIG.GOOGLE.TASKS_LIST_ID}</p>`;
+                
+                // Check if gapi is available
+                if (!window.gapi || !window.gapi.client) {
+                    resultDiv.innerHTML += '<p style="color: red;">❌ Google API not loaded</p>';
+                    return;
+                }
+                
+                resultDiv.innerHTML += '<p style="color: green;">✅ Google API loaded</p>';
+                
+                // Check if user is signed in
+                if (!window.gapi.client.getToken()) {
+                    resultDiv.innerHTML += '<p style="color: orange;">⚠️ Not signed in to Google</p>';
+                    resultDiv.innerHTML += '<p>Please sign in to the main dashboard first</p>';
+                    return;
+                }
+                
+                resultDiv.innerHTML += '<p style="color: green;">✅ User is signed in</p>';
+                
+                // Test getting task lists first
+                resultDiv.innerHTML += '<p>Getting task lists...</p>';
+                const listsResponse = await window.gapi.client.tasks.tasklists.list();
+                resultDiv.innerHTML += `<p>Task lists response: ${JSON.stringify(listsResponse.result, null, 2)}</p>`;
+                
+                // Test getting tasks
+                resultDiv.innerHTML += '<p>Getting tasks...</p>';
+                const tasksResponse = await window.gapi.client.tasks.tasks.list({
+                    tasklist: window.CONFIG.GOOGLE.TASKS_LIST_ID,
+                    showCompleted: false,
+                    showHidden: false
+                });
+                
+                resultDiv.innerHTML += `<p style="color: green;">✅ Tasks loaded successfully!</p>`;
+                resultDiv.innerHTML += `<p>Tasks response: ${JSON.stringify(tasksResponse.result, null, 2)}</p>`;
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                resultDiv.innerHTML += `<p>Full error: ${JSON.stringify(error, null, 2)}</p>`;
+            }
+        }
+        
+        // Auto-run test when page loads
+        window.addEventListener('load', testTasksAPI);
+    </script>
+</body>
+</html>
+
