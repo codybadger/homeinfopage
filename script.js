@@ -3,12 +3,16 @@
 
 // Initialize the dashboard
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard initializing...');
     updateDateTime();
     setInterval(updateDateTime, 1000); // Update every second
     
     // Load data with error handling
+    console.log('Loading weather data...');
     loadWeatherData();
+    console.log('Loading calendar data...');
     loadCalendarData();
+    console.log('Loading tasks data...');
     loadTasksData();
 });
 
@@ -70,9 +74,11 @@ function updateDateTime() {
 
 // Weather API integration
 async function loadWeatherData() {
+    console.log('loadWeatherData called');
     const weatherElement = document.getElementById('weather-info');
     
     try {
+        console.log('Weather API Key:', CONFIG.WEATHER.API_KEY);
         if (CONFIG.WEATHER.API_KEY === 'YOUR_OPENWEATHER_API_KEY') {
             weatherElement.innerHTML = `
                 <div class="error">
