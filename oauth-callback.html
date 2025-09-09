@@ -80,8 +80,12 @@
         // Handle OAuth callback for iOS 12
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
+            const urlHash = window.location.hash.substring(1); // Remove the # symbol
+            const hashParams = new URLSearchParams(urlHash);
+            
             const code = urlParams.get('code');
-            const error = urlParams.get('error');
+            const error = urlParams.get('error') || hashParams.get('error');
+            const accessToken = hashParams.get('access_token');
             const statusDiv = document.getElementById('status-message');
             
             if (error) {
@@ -92,17 +96,67 @@
                 return;
             }
             
-            if (!code) {
-                statusDiv.innerHTML = '<div class="error">No authorization code received</div>';
+            if (accessToken) {
+                // Handle implicit flow (token response)
+                handleTokenResponse(hashParams);
+            } else if (code) {
+                // Handle authorization code flow
+                exchangeCodeForToken(code);
+            } else {
+                statusDiv.innerHTML = '<div class="error">No authorization code or token received</div>';
                 setTimeout(function() {
                     window.location.href = 'index.html';
                 }, 3000);
                 return;
             }
-            
-            // Exchange authorization code for access token
-            exchangeCodeForToken(code);
         });
+        
+        function handleTokenResponse(hashParams) {
+            try {
+                const accessToken = hashParams.get('access_token');
+                const expiresIn = hashParams.get('expires_in');
+                const tokenType = hashParams.get('token_type');
+                const scope = hashParams.get('scope');
+                
+                if (!accessToken) {
+                    throw new Error('No access token received');
+                }
+                
+                // Store the token
+                const tokenWithExpiry = {
+                    access_token: accessToken,
+                    expires_in: parseInt(expiresIn) || 3600,
+                    token_type: tokenType || 'Bearer',
+                    scope: scope,
+                    expires_at: (Date.now() / 1000) + (parseInt(expiresIn) || 3600),
+                    stored_at: Date.now() / 1000
+                };
+                
+                localStorage.setItem('google_access_token', JSON.stringify(tokenWithExpiry));
+                
+                // Show success message
+                document.getElementById('status-message').innerHTML = 
+                    '<div class="success">Authentication successful! Redirecting...</div>';
+                
+                // Get the return URL
+                const returnUrl = localStorage.getItem('oauth_return_url') || 'index.html';
+                localStorage.removeItem('oauth_return_url');
+                
+                // Redirect back to the original page
+                setTimeout(function() {
+                    window.location.href = returnUrl;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Token handling error:', error);
+                document.getElementById('status-message').innerHTML = 
+                    '<div class="error">Authentication failed: ' + error.message + '</div>';
+                
+                setTimeout(function() {
+                    window.location.href = 'index.html';
+                }, 3000);
+            }
+        }
         
         async function exchangeCodeForToken(code) {
             try {

@@ -444,9 +444,9 @@ async function signInToGoogle() {
             // For iOS 12, redirect to Google OAuth instead of using popup
             const authUrl = 'https://accounts.google.com/oauth/authorize?' + 
                 'client_id=' + encodeURIComponent(CONFIG.GOOGLE.CLIENT_ID) +
-                '&redirect_uri=' + encodeURIComponent(window.location.origin + '/oauth-callback.html') +
+                '&redirect_uri=' + encodeURIComponent('http://homeinfopage.codycardbadger.com/oauth-callback.html') +
                 '&scope=' + encodeURIComponent('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly') +
-                '&response_type=code' +
+                '&response_type=token' +
                 '&access_type=offline' +
                 '&prompt=consent';
             
