@@ -433,76 +433,24 @@ async function signInToGoogle() {
         console.log('Sign-in initiated');
         console.log('iOS 12 detected:', window.isIOS12);
         
-        // iOS 12 has issues with popup-based OAuth, so we'll use a different approach
-        if (window.isIOS12) {
-            console.log('Using iOS 12 OAuth redirect flow');
-            
-            // For iOS 12, redirect to Google OAuth instead of using popup
-            const authUrl = 'https://accounts.google.com/oauth/authorize?' + 
-                'client_id=' + encodeURIComponent(CONFIG.GOOGLE.CLIENT_ID) +
-                '&redirect_uri=' + encodeURIComponent('http://homeinfopage.codycardbadger.com/oauth-callback.html') +
-                '&scope=' + encodeURIComponent('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly') +
-                '&response_type=token' +
-                '&access_type=offline' +
-                '&prompt=consent';
-            
-            console.log('OAuth URL:', authUrl);
-            
-            // Store the current page URL to return to after OAuth
-            localStorage.setItem('oauth_return_url', window.location.href);
-            
-            // Redirect to Google OAuth
-            window.location.href = authUrl;
-            return;
-        }
+        // Always use redirect flow for iOS 12 - it's more reliable
+        console.log('Using OAuth redirect flow');
+        const authUrl = 'https://accounts.google.com/oauth/authorize?' + 
+            'client_id=' + encodeURIComponent(CONFIG.GOOGLE.CLIENT_ID) +
+            '&redirect_uri=' + encodeURIComponent('http://homeinfopage.codycardbadger.com/oauth-callback.html') +
+            '&scope=' + encodeURIComponent('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly') +
+            '&response_type=token' +
+            '&access_type=offline' +
+            '&prompt=consent';
         
-        // Use older Google API for iOS 12 compatibility
-        if (window.gapi && window.gapi.auth2) {
-            // Use gapi.auth2 for older browsers
-            window.gapi.auth2.init({
-                client_id: CONFIG.GOOGLE.CLIENT_ID
-            }).then(function() {
-                const authInstance = window.gapi.auth2.getAuthInstance();
-                authInstance.signIn({
-                    scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly'
-                }).then(function(googleUser) {
-                    const authResponse = googleUser.getAuthResponse();
-                    
-                    // Store the token
-                    storeGoogleToken(authResponse);
-                    
-                    // Set the access token
-                    window.gapi.client.setToken(authResponse);
-                    
-                    // Show sign-out button
-                    updateSignOutButton(true);
-                    
-                    // Reload data
-                    loadCalendarData();
-                    loadTasksData();
-                }).catch(function(error) {
-                    console.error('Sign-in error:', error);
-                });
-            });
-        } else {
-            // Fallback to redirect flow for iOS 12
-            console.log('Using redirect flow for iOS 12');
-            const authUrl = 'https://accounts.google.com/oauth/authorize?' + 
-                'client_id=' + encodeURIComponent(CONFIG.GOOGLE.CLIENT_ID) +
-                '&redirect_uri=' + encodeURIComponent('http://homeinfopage.codycardbadger.com/oauth-callback.html') +
-                '&scope=' + encodeURIComponent('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly') +
-                '&response_type=token' +
-                '&access_type=offline' +
-                '&prompt=consent';
-            
-            console.log('OAuth URL:', authUrl);
-            
-            // Store the current page URL to return to after OAuth
-            localStorage.setItem('oauth_return_url', window.location.href);
-            
-            // Redirect to Google OAuth
-            window.location.href = authUrl;
-        }
+        console.log('OAuth URL:', authUrl);
+        
+        // Store the current page URL to return to after OAuth
+        localStorage.setItem('oauth_return_url', window.location.href);
+        
+        // Redirect to Google OAuth
+        window.location.href = authUrl;
+        
     } catch (error) {
         console.error('Sign-in error:', error);
     }

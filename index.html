@@ -63,9 +63,28 @@
         </main>
     </div>
 
-    <script src="ios12-compatibility.js?v=5"></script>
-    <script src="config.js?v=5"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="script-v2.js?v=5"></script>
+    <script src="ios12-compatibility.js?v=6"></script>
+    <script src="config.js?v=6"></script>
+    <script>
+        // Load Google API with iOS 12 compatibility
+        (function() {
+            var script = document.createElement('script');
+            script.src = 'https://apis.google.com/js/api.js';
+            script.onload = function() {
+                console.log('Google API script loaded');
+                // Load the client and auth2
+                if (window.gapi) {
+                    window.gapi.load('client:auth2', function() {
+                        console.log('Google API client:auth2 loaded');
+                    });
+                }
+            };
+            script.onerror = function() {
+                console.error('Failed to load Google API script');
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
+    <script src="script-v2.js?v=6"></script>
 </body>
 </html>
