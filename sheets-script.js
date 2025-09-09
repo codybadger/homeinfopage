@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSheetsData();
 });
 
-// Restore Google token from localStorage
+// Restore Google token from localStorage (reuse main script logic)
 async function restoreGoogleToken() {
     try {
         const storedToken = localStorage.getItem('google_access_token');
@@ -27,10 +27,18 @@ async function restoreGoogleToken() {
                         window.gapi.client.setToken(token);
                     }
                     return;
+                } else {
+                    // Token is expired, try to refresh it using the main script's refresh function
+                    if (typeof refreshGoogleToken === 'function') {
+                        const refreshed = await refreshGoogleToken();
+                        if (refreshed) {
+                            return;
+                        }
+                    }
                 }
             }
             
-            // Token is expired, remove it
+            // Token is expired and couldn't be refreshed, remove it
             localStorage.removeItem('google_access_token');
         }
     } catch (error) {
@@ -120,22 +128,28 @@ async function loadGoogleAPI() {
 
 async function signInToGoogle() {
     try {
-        // Use Google Identity Services for authentication
+        // Use Google Identity Services for authentication with offline access
         const tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: window.CONFIG?.GOOGLE?.CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-            callback: (response) => {
+            prompt: 'consent', // Force consent to get refresh token
+            callback: async (response) => {
                 if (response.error) {
                     console.error('Sign-in error:', response.error);
                     return;
                 }
                 
-                // Calculate expiration time and store the token in localStorage for persistence
-                const tokenWithExpiry = {
-                    ...response,
-                    expires_at: (Date.now() / 1000) + (response.expires_in || 3600)
-                };
-                localStorage.setItem('google_access_token', JSON.stringify(tokenWithExpiry));
+                // Store the token using the main script's storage function
+                if (typeof storeGoogleToken === 'function') {
+                    await storeGoogleToken(response);
+                } else {
+                    // Fallback to basic storage
+                    const tokenWithExpiry = {
+                        ...response,
+                        expires_at: (Date.now() / 1000) + (response.expires_in || 3600)
+                    };
+                    localStorage.setItem('google_access_token', JSON.stringify(tokenWithExpiry));
+                }
                 
                 // Set the access token
                 window.gapi.client.setToken(response);

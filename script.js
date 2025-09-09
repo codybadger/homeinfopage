@@ -16,6 +16,110 @@ document.addEventListener('DOMContentLoaded', function() {
     loadTasksData();
 });
 
+// Store Google token with refresh capability
+async function storeGoogleToken(tokenResponse) {
+    try {
+        const tokenWithExpiry = {
+            ...tokenResponse,
+            expires_at: (Date.now() / 1000) + (tokenResponse.expires_in || 3600),
+            stored_at: Date.now() / 1000
+        };
+        localStorage.setItem('google_access_token', JSON.stringify(tokenWithExpiry));
+        
+        // Set up automatic refresh 5 minutes before expiration
+        scheduleTokenRefresh(tokenWithExpiry);
+    } catch (error) {
+        console.error('Error storing Google token:', error);
+    }
+}
+
+// Schedule automatic token refresh
+function scheduleTokenRefresh(token) {
+    if (token.expires_at) {
+        const refreshTime = (token.expires_at - 300) * 1000; // 5 minutes before expiration
+        const now = Date.now();
+        
+        if (refreshTime > now) {
+            const timeUntilRefresh = refreshTime - now;
+            console.log(`Token refresh scheduled in ${Math.round(timeUntilRefresh / 1000)} seconds`);
+            
+            setTimeout(async () => {
+                await refreshGoogleToken();
+            }, timeUntilRefresh);
+        }
+    }
+}
+
+// Refresh Google token automatically
+async function refreshGoogleToken() {
+    try {
+        const storedToken = localStorage.getItem('google_access_token');
+        if (!storedToken) {
+            console.log('No stored token to refresh');
+            return false;
+        }
+        
+        const token = JSON.parse(storedToken);
+        
+        // Check if we have a refresh token
+        if (!token.refresh_token) {
+            console.log('No refresh token available, user needs to sign in again');
+            localStorage.removeItem('google_access_token');
+            updateSignOutButton(false);
+            return false;
+        }
+        
+        console.log('Refreshing Google token...');
+        
+        // Use the refresh token to get a new access token
+        const response = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: CONFIG.GOOGLE.CLIENT_ID,
+                refresh_token: token.refresh_token,
+                grant_type: 'refresh_token'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Token refresh failed: ${response.status}`);
+        }
+        
+        const newToken = await response.json();
+        
+        // Store the new token (preserving the refresh token)
+        const updatedToken = {
+            ...newToken,
+            refresh_token: token.refresh_token, // Preserve the refresh token
+            expires_at: (Date.now() / 1000) + (newToken.expires_in || 3600),
+            stored_at: Date.now() / 1000
+        };
+        
+        localStorage.setItem('google_access_token', JSON.stringify(updatedToken));
+        
+        // Set the new token
+        if (window.gapi && window.gapi.client) {
+            window.gapi.client.setToken(newToken);
+        }
+        
+        // Schedule the next refresh
+        scheduleTokenRefresh(updatedToken);
+        
+        console.log('Token refreshed successfully');
+        return true;
+        
+    } catch (error) {
+        console.error('Error refreshing Google token:', error);
+        // If refresh fails, remove the token and require re-authentication
+        localStorage.removeItem('google_access_token');
+        updateSignOutButton(false);
+        return false;
+    }
+}
+
 // Restore Google token from localStorage
 async function restoreGoogleToken() {
     try {
@@ -32,11 +136,22 @@ async function restoreGoogleToken() {
                         window.gapi.client.setToken(token);
                     }
                     updateSignOutButton(true);
+                    
+                    // Schedule automatic refresh
+                    scheduleTokenRefresh(token);
                     return;
+                } else {
+                    // Token is expired, try to refresh it
+                    console.log('Token expired, attempting refresh...');
+                    const refreshed = await refreshGoogleToken();
+                    if (refreshed) {
+                        updateSignOutButton(true);
+                        return;
+                    }
                 }
             }
             
-            // Token is expired, remove it
+            // Token is expired and couldn't be refreshed, remove it
             localStorage.removeItem('google_access_token');
         }
         updateSignOutButton(false);
@@ -279,22 +394,38 @@ async function loadGoogleAPI() {
 
 async function signInToGoogle() {
     try {
-        // Use Google Identity Services for authentication
+        // iOS 12 has issues with popup-based OAuth, so we'll use a different approach
+        if (window.isIOS12) {
+            // For iOS 12, redirect to Google OAuth instead of using popup
+            const authUrl = 'https://accounts.google.com/oauth/authorize?' + 
+                'client_id=' + encodeURIComponent(CONFIG.GOOGLE.CLIENT_ID) +
+                '&redirect_uri=' + encodeURIComponent(window.location.origin + '/oauth-callback.html') +
+                '&scope=' + encodeURIComponent('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly') +
+                '&response_type=code' +
+                '&access_type=offline' +
+                '&prompt=consent';
+            
+            // Store the current page URL to return to after OAuth
+            localStorage.setItem('oauth_return_url', window.location.href);
+            
+            // Redirect to Google OAuth
+            window.location.href = authUrl;
+            return;
+        }
+        
+        // Use Google Identity Services for authentication with offline access (modern browsers)
         const tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CONFIG.GOOGLE.CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly',
-            callback: (response) => {
+            prompt: 'consent', // Force consent to get refresh token
+            callback: async (response) => {
                 if (response.error) {
                     console.error('Sign-in error:', response.error);
                     return;
                 }
                 
-                // Calculate expiration time and store the token in localStorage for persistence
-                const tokenWithExpiry = {
-                    ...response,
-                    expires_at: (Date.now() / 1000) + (response.expires_in || 3600)
-                };
-                localStorage.setItem('google_access_token', JSON.stringify(tokenWithExpiry));
+                // Store the initial token
+                await storeGoogleToken(response);
                 
                 // Set the access token
                 window.gapi.client.setToken(response);
@@ -353,50 +484,102 @@ async function getCalendarEvents() {
     // Fetch events from all calendars
     const allEvents = [];
     
-    for (const calendarId of calendarIds) {
-        try {
-            const response = await window.gapi.client.calendar.events.list({
-                calendarId: calendarId,
-                timeMin: startOfToday.toISOString(),
-                timeMax: thirtyDaysFromNow.toISOString(),
-                singleEvents: true,
-                orderBy: 'startTime'
-            });
-            
-            const events = response.result.items || [];
-            console.log(`Successfully loaded ${events.length} events from calendar: ${calendarId}`);
-            
-            // Add calendar name and color to each event for identification
-            // Filter out birthday events
-            const filteredEvents = events.filter(event => {
-                const title = (event.summary || '').toLowerCase();
-                const isBirthday = title.includes('birthday') || 
-                                  title.includes('anniversary') ||
-                                  title.includes('bday') ||
-                                  title.includes('birth') ||
-                                  title.includes('turns') ||
-                                  title.includes('years old');
+    // Use iOS 12 compatible async iteration
+    if (window.isIOS12 && window.asyncForEach) {
+        await window.asyncForEach(calendarIds, async function(calendarId) {
+            try {
+                const response = await window.gapi.client.calendar.events.list({
+                    calendarId: calendarId,
+                    timeMin: startOfToday.toISOString(),
+                    timeMax: thirtyDaysFromNow.toISOString(),
+                    singleEvents: true,
+                    orderBy: 'startTime'
+                });
                 
-                if (isBirthday) {
-                    console.log(`Filtered out birthday event: "${event.summary}" from calendar: ${calendarId}`);
+                const events = response.result.items || [];
+                console.log(`Successfully loaded ${events.length} events from calendar: ${calendarId}`);
+                
+                // Add calendar name and color to each event for identification
+                // Filter out birthday events
+                const filteredEvents = events.filter(function(event) {
+                    const title = (event.summary || '').toLowerCase();
+                    const isBirthday = title.includes('birthday') || 
+                                      title.includes('anniversary') ||
+                                      title.includes('bday') ||
+                                      title.includes('birth') ||
+                                      title.includes('turns') ||
+                                      title.includes('years old');
+                    
+                    if (isBirthday) {
+                        console.log(`Filtered out birthday event: "${event.summary}" from calendar: ${calendarId}`);
+                    }
+                    
+                    return !isBirthday;
+                });
+                
+                filteredEvents.forEach(function(event) {
+                    event.calendarName = getCalendarDisplayName(calendarId);
+                    event.calendarColor = getCalendarColor(calendarId);
+                });
+                
+                allEvents.push.apply(allEvents, filteredEvents);
+            } catch (error) {
+                console.error(`Failed to load events from calendar ${calendarId}:`, error);
+                // Try to get more specific error information
+                if (error.status === 404) {
+                    console.error(`Calendar "${calendarId}" not found. Check the calendar ID.`);
+                } else if (error.status === 403) {
+                    console.error(`Access denied to calendar "${calendarId}". Check permissions.`);
                 }
+            }
+        });
+    } else {
+        // Modern browsers can use for...of
+        for (const calendarId of calendarIds) {
+            try {
+                const response = await window.gapi.client.calendar.events.list({
+                    calendarId: calendarId,
+                    timeMin: startOfToday.toISOString(),
+                    timeMax: thirtyDaysFromNow.toISOString(),
+                    singleEvents: true,
+                    orderBy: 'startTime'
+                });
                 
-                return !isBirthday;
-            });
-            
-            filteredEvents.forEach(event => {
-                event.calendarName = getCalendarDisplayName(calendarId);
-                event.calendarColor = getCalendarColor(calendarId);
-            });
-            
-            allEvents.push(...filteredEvents);
-        } catch (error) {
-            console.error(`Failed to load events from calendar ${calendarId}:`, error);
-            // Try to get more specific error information
-            if (error.status === 404) {
-                console.error(`Calendar "${calendarId}" not found. Check the calendar ID.`);
-            } else if (error.status === 403) {
-                console.error(`Access denied to calendar "${calendarId}". Check permissions.`);
+                const events = response.result.items || [];
+                console.log(`Successfully loaded ${events.length} events from calendar: ${calendarId}`);
+                
+                // Add calendar name and color to each event for identification
+                // Filter out birthday events
+                const filteredEvents = events.filter(event => {
+                    const title = (event.summary || '').toLowerCase();
+                    const isBirthday = title.includes('birthday') || 
+                                      title.includes('anniversary') ||
+                                      title.includes('bday') ||
+                                      title.includes('birth') ||
+                                      title.includes('turns') ||
+                                      title.includes('years old');
+                    
+                    if (isBirthday) {
+                        console.log(`Filtered out birthday event: "${event.summary}" from calendar: ${calendarId}`);
+                    }
+                    
+                    return !isBirthday;
+                });
+                
+                filteredEvents.forEach(event => {
+                    event.calendarName = getCalendarDisplayName(calendarId);
+                    event.calendarColor = getCalendarColor(calendarId);
+                });
+                
+                allEvents.push(...filteredEvents);
+            } catch (error) {
+                console.error(`Failed to load events from calendar ${calendarId}:`, error);
+                // Try to get more specific error information
+                if (error.status === 404) {
+                    console.error(`Calendar "${calendarId}" not found. Check the calendar ID.`);
+                } else if (error.status === 403) {
+                    console.error(`Access denied to calendar "${calendarId}". Check permissions.`);
+                }
             }
         }
     }
@@ -800,6 +983,30 @@ function signOutFromGoogle() {
     localStorage.removeItem('google_access_token');
     if (window.gapi && window.gapi.client) {
         window.gapi.client.setToken(null);
+    }
+    
+    // Revoke the refresh token if available
+    const storedToken = localStorage.getItem('google_access_token');
+    if (storedToken) {
+        try {
+            const token = JSON.parse(storedToken);
+            if (token.refresh_token) {
+                // Revoke the refresh token
+                fetch('https://oauth2.googleapis.com/revoke', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        token: token.refresh_token
+                    })
+                }).catch(error => {
+                    console.error('Error revoking refresh token:', error);
+                });
+            }
+        } catch (error) {
+            console.error('Error parsing token for revocation:', error);
+        }
     }
     
     // Reload the page to show sign-in prompts
