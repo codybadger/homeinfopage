@@ -409,26 +409,22 @@ async function loadGoogleAPI() {
             return;
         }
         
-        // Load Google API
-        const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        script.onload = function() {
-            window.gapi.load('client', function() {
-                window.gapi.client.init({
-                    apiKey: CONFIG.GOOGLE.API_KEY,
-                    discoveryDocs: [
-                        'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
-                        'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'
-                    ]
-                }).then(function() {
-                    // Restore token after API is initialized
-                    restoreGoogleToken();
-                    resolve();
-                }).catch(reject);
-            });
-        };
-        script.onerror = reject;
-        document.head.appendChild(script);
+        // Load Google API with auth2 support
+        window.gapi.load('client:auth2', function() {
+            window.gapi.client.init({
+                apiKey: CONFIG.GOOGLE.API_KEY,
+                clientId: CONFIG.GOOGLE.CLIENT_ID,
+                discoveryDocs: [
+                    'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
+                    'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'
+                ],
+                scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly'
+            }).then(function() {
+                // Restore token after API is initialized
+                restoreGoogleToken();
+                resolve();
+            }).catch(reject);
+        });
     });
 }
 
@@ -460,33 +456,53 @@ async function signInToGoogle() {
             return;
         }
         
-        // Use Google Identity Services for authentication with offline access (modern browsers)
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CONFIG.GOOGLE.CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly',
-            prompt: 'consent', // Force consent to get refresh token
-            callback: async function(response) {
-                if (response.error) {
-                    console.error('Sign-in error:', response.error);
-                    return;
-                }
-                
-                // Store the initial token
-                await storeGoogleToken(response);
-                
-                // Set the access token
-                window.gapi.client.setToken(response);
-                
-                // Show sign-out button
-                updateSignOutButton(true);
-                
-                // Reload data
-                loadCalendarData();
-                loadTasksData();
-            }
-        });
-        
-        tokenClient.requestAccessToken();
+        // Use older Google API for iOS 12 compatibility
+        if (window.gapi && window.gapi.auth2) {
+            // Use gapi.auth2 for older browsers
+            window.gapi.auth2.init({
+                client_id: CONFIG.GOOGLE.CLIENT_ID
+            }).then(function() {
+                const authInstance = window.gapi.auth2.getAuthInstance();
+                authInstance.signIn({
+                    scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly'
+                }).then(function(googleUser) {
+                    const authResponse = googleUser.getAuthResponse();
+                    
+                    // Store the token
+                    storeGoogleToken(authResponse);
+                    
+                    // Set the access token
+                    window.gapi.client.setToken(authResponse);
+                    
+                    // Show sign-out button
+                    updateSignOutButton(true);
+                    
+                    // Reload data
+                    loadCalendarData();
+                    loadTasksData();
+                }).catch(function(error) {
+                    console.error('Sign-in error:', error);
+                });
+            });
+        } else {
+            // Fallback to redirect flow for iOS 12
+            console.log('Using redirect flow for iOS 12');
+            const authUrl = 'https://accounts.google.com/oauth/authorize?' + 
+                'client_id=' + encodeURIComponent(CONFIG.GOOGLE.CLIENT_ID) +
+                '&redirect_uri=' + encodeURIComponent('http://homeinfopage.codycardbadger.com/oauth-callback.html') +
+                '&scope=' + encodeURIComponent('https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly') +
+                '&response_type=token' +
+                '&access_type=offline' +
+                '&prompt=consent';
+            
+            console.log('OAuth URL:', authUrl);
+            
+            // Store the current page URL to return to after OAuth
+            localStorage.setItem('oauth_return_url', window.location.href);
+            
+            // Redirect to Google OAuth
+            window.location.href = authUrl;
+        }
     } catch (error) {
         console.error('Sign-in error:', error);
     }
