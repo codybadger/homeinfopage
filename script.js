@@ -491,8 +491,8 @@ async function listAvailableCalendars() {
         const response = await window.gapi.client.calendar.calendarList.list();
         const calendars = response.result.items || [];
         console.log('Available calendars:');
-        calendars.forEach(calendar => {
-            console.log(`- "${calendar.summary}" (ID: ${calendar.id})`);
+        calendars.forEach(function(calendar) {
+            console.log('- "' + calendar.summary + '" (ID: ' + calendar.id + ')');
         });
         return calendars;
     } catch (error) {
@@ -537,7 +537,7 @@ async function getCalendarEvents() {
                 });
                 
                 const events = response.result.items || [];
-                console.log(`Successfully loaded ${events.length} events from calendar: ${calendarId}`);
+                console.log('Successfully loaded ' + events.length + ' events from calendar: ' + calendarId);
                 
                 // Add calendar name and color to each event for identification
                 // Filter out birthday events
@@ -551,7 +551,7 @@ async function getCalendarEvents() {
                                       title.includes('years old');
                     
                     if (isBirthday) {
-                        console.log(`Filtered out birthday event: "${event.summary}" from calendar: ${calendarId}`);
+                        console.log('Filtered out birthday event: "' + event.summary + '" from calendar: ' + calendarId);
                     }
                     
                     return !isBirthday;
@@ -586,11 +586,11 @@ async function getCalendarEvents() {
                 });
                 
                 const events = response.result.items || [];
-                console.log(`Successfully loaded ${events.length} events from calendar: ${calendarId}`);
+                console.log('Successfully loaded ' + events.length + ' events from calendar: ' + calendarId);
                 
                 // Add calendar name and color to each event for identification
                 // Filter out birthday events
-                const filteredEvents = events.filter(event => {
+                const filteredEvents = events.filter(function(event) {
                     const title = (event.summary || '').toLowerCase();
                     const isBirthday = title.includes('birthday') || 
                                       title.includes('anniversary') ||
@@ -600,13 +600,13 @@ async function getCalendarEvents() {
                                       title.includes('years old');
                     
                     if (isBirthday) {
-                        console.log(`Filtered out birthday event: "${event.summary}" from calendar: ${calendarId}`);
+                        console.log('Filtered out birthday event: "' + event.summary + '" from calendar: ' + calendarId);
                     }
                     
                     return !isBirthday;
                 });
                 
-                filteredEvents.forEach(event => {
+                filteredEvents.forEach(function(event) {
                     event.calendarName = getCalendarDisplayName(calendarId);
                     event.calendarColor = getCalendarColor(calendarId);
                 });
@@ -625,7 +625,7 @@ async function getCalendarEvents() {
     }
     
     // Sort all events by start time
-    allEvents.sort((a, b) => {
+    allEvents.sort(function(a, b) {
         // Handle both dateTime (with time) and date (all-day) events consistently
         let timeA, timeB;
         
@@ -689,7 +689,7 @@ function displayCalendarEvents(events) {
     // Expand multi-day events into separate entries for each day
     const expandedEvents = [];
     
-    events.forEach(event => {
+    events.forEach(function(event) {
         let startDate, endDate;
         
         if (event.start.dateTime) {
@@ -732,7 +732,7 @@ function displayCalendarEvents(events) {
     });
     
     // Sort the expanded events by date/time
-    expandedEvents.sort((a, b) => {
+    expandedEvents.sort(function(a, b) {
         let timeA, timeB;
         
         if (a.start.dateTime) {
@@ -764,15 +764,15 @@ function displayCalendarEvents(events) {
         'en.usa#holiday@group.v.calendar.google.com': 6 // Holidays
     };
     
-    expandedEvents.forEach(event => {
+    expandedEvents.forEach(function(event) {
         // Create a unique key for this event based on date, time, and title
         let eventKey;
         if (event.start.dateTime) {
             const eventDate = new Date(event.start.dateTime);
-            eventKey = `${eventDate.toDateString()}_${eventDate.toTimeString()}_${event.summary}`;
+            eventKey = eventDate.toDateString() + '_' + eventDate.toTimeString() + '_' + event.summary;
         } else {
             const eventDate = new Date(event.start.date + 'T00:00:00');
-            eventKey = `${eventDate.toDateString()}_allday_${event.summary}`;
+            eventKey = eventDate.toDateString() + '_allday_' + event.summary;
         }
         
         const currentPriority = calendarPriority[event.calendarId] || 999;
@@ -783,14 +783,14 @@ function displayCalendarEvents(events) {
             seenEvents.set(eventKey, currentPriority);
             
             // Remove any existing event with this key from deduplicatedEvents
-            const existingIndex = deduplicatedEvents.findIndex(e => {
+            const existingIndex = deduplicatedEvents.findIndex(function(e) {
                 let existingKey;
                 if (e.start.dateTime) {
                     const existingDate = new Date(e.start.dateTime);
-                    existingKey = `${existingDate.toDateString()}_${existingDate.toTimeString()}_${e.summary}`;
+                    existingKey = existingDate.toDateString() + '_' + existingDate.toTimeString() + '_' + e.summary;
                 } else {
                     const existingDate = new Date(e.start.date + 'T00:00:00');
-                    existingKey = `${existingDate.toDateString()}_allday_${e.summary}`;
+                    existingKey = existingDate.toDateString() + '_allday_' + e.summary;
                 }
                 return existingKey === eventKey;
             });
@@ -803,7 +803,7 @@ function displayCalendarEvents(events) {
         }
     });
     
-    const eventsHtml = deduplicatedEvents.map(event => {
+    const eventsHtml = deduplicatedEvents.map(function(event) {
         // Handle both dateTime (with time) and date (all-day) events
         let start, timeString, dayOfWeek, dateString;
         
@@ -936,7 +936,7 @@ async function getTodoistTasks() {
         const data = await response.json();
         
         // Filter out completed tasks and return only active ones
-        return data.filter(task => !task.completed);
+        return data.filter(function(task) { return !task.completed; });
     } catch (error) {
         console.error('Error getting tasks from Todoist:', error);
         throw error;
@@ -987,7 +987,7 @@ function displayTasks(tasks) {
         return;
     }
     
-    const tasksHtml = tasks.map(task => {
+    const tasksHtml = tasks.map(function(task) {
         // Handle different task formats (Todoist vs Google Tasks)
         const title = task.content || task.title || task.name;
         const dueDate = task.due?.date || task.dueDate || task.due;

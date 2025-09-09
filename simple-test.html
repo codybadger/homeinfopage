@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test - Home Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            margin: 20px;
+            color: #333;
+        }
+        .test-box {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 10px 0;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Simple Dashboard Test</h1>
+    
+    <div class="test-box">
+        <h3>Basic Info</h3>
+        <div id="basic-info"></div>
+    </div>
+    
+    <div class="test-box">
+        <h3>File Loading</h3>
+        <div id="file-loading"></div>
+    </div>
+    
+    <div class="test-box">
+        <h3>API Test</h3>
+        <div id="api-test"></div>
+        <button onclick="testWeather()">Test Weather API</button>
+    </div>
+    
+    <div class="test-box">
+        <h3>Console Output</h3>
+        <div id="console-output" style="background: #f9f9f9; padding: 10px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        let consoleOutput = '';
+        
+        // Capture console messages
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            consoleOutput += 'LOG: ' + args.join(' ') + '\n';
+            updateConsole();
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            consoleOutput += 'ERROR: ' + args.join(' ') + '\n';
+            updateConsole();
+            originalError.apply(console, args);
+        };
+        
+        function updateConsole() {
+            document.getElementById('console-output').textContent = consoleOutput;
+        }
+        
+        function testWeather() {
+            console.log('Testing weather API...');
+            
+            // Try to load config
+            if (typeof CONFIG === 'undefined') {
+                console.error('CONFIG not loaded');
+                document.getElementById('api-test').innerHTML = '<div class="error">CONFIG not loaded</div>';
+                return;
+            }
+            
+            console.log('CONFIG loaded, testing weather...');
+            
+            // Test fetch
+            if (typeof fetch === 'undefined') {
+                console.error('Fetch API not available');
+                document.getElementById('api-test').innerHTML = '<div class="error">Fetch API not available</div>';
+                return;
+            }
+            
+            console.log('Fetch API available, making request...');
+            
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${CONFIG.WEATHER.CITY}&appid=${CONFIG.WEATHER.API_KEY}&units=${CONFIG.WEATHER.UNITS}`;
+            console.log('Weather URL:', url);
+            
+            fetch(url)
+                .then(response => {
+                    console.log('Weather response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Weather API error: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Weather data received:', data);
+                    document.getElementById('api-test').innerHTML = '<div class="success">Weather API working! Temperature: ' + data.main.temp + '°F</div>';
+                })
+                .catch(error => {
+                    console.error('Weather API error:', error);
+                    document.getElementById('api-test').innerHTML = '<div class="error">Weather API failed: ' + error.message + '</div>';
+                });
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Simple test page loaded');
+            
+            // Basic info
+            const basicInfo = `
+User Agent: ${navigator.userAgent}
+Current URL: ${window.location.href}
+Timestamp: ${new Date().toLocaleString()}
+            `;
+            document.getElementById('basic-info').innerHTML = '<pre>' + basicInfo + '</pre>';
+            
+            // File loading status
+            let fileStatus = 'Checking files...\n';
+            
+            // Check if config is loaded
+            if (typeof CONFIG !== 'undefined') {
+                fileStatus += 'CONFIG: ✓ Loaded\n';
+                fileStatus += 'Weather API Key: ' + (CONFIG.WEATHER.API_KEY ? 'Set' : 'Not set') + '\n';
+                fileStatus += 'Google Client ID: ' + (CONFIG.GOOGLE.CLIENT_ID ? 'Set' : 'Not set') + '\n';
+            } else {
+                fileStatus += 'CONFIG: ✗ Not loaded\n';
+            }
+            
+            // Check if compatibility layer is loaded
+            if (typeof window.ios12Compatibility !== 'undefined') {
+                fileStatus += 'iOS Compatibility: ✓ Loaded\n';
+                fileStatus += 'Is iOS 12: ' + (window.ios12Compatibility.isIOS12 ? 'Yes' : 'No') + '\n';
+            } else {
+                fileStatus += 'iOS Compatibility: ✗ Not loaded\n';
+            }
+            
+            // Check fetch API
+            if (typeof fetch !== 'undefined') {
+                fileStatus += 'Fetch API: ✓ Available\n';
+            } else {
+                fileStatus += 'Fetch API: ✗ Not available\n';
+            }
+            
+            document.getElementById('file-loading').innerHTML = '<pre>' + fileStatus + '</pre>';
+        });
+    </script>
+    
+    <!-- Try to load config -->
+    <script src="config.js"></script>
+    <script src="ios12-compatibility.js"></script>
+</body>
+</html>
