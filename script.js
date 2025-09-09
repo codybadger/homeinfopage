@@ -44,10 +44,10 @@ function scheduleTokenRefresh(token) {
         
         if (refreshTime > now) {
             const timeUntilRefresh = refreshTime - now;
-            console.log(`Token refresh scheduled in ${Math.round(timeUntilRefresh / 1000)} seconds`);
+            console.log('Token refresh scheduled in ' + Math.round(timeUntilRefresh / 1000) + ' seconds');
             
-            setTimeout(async () => {
-                await refreshGoogleToken();
+            setTimeout(function() {
+                refreshGoogleToken();
             }, timeUntilRefresh);
         }
     }
@@ -88,7 +88,7 @@ async function refreshGoogleToken() {
         });
         
         if (!response.ok) {
-            throw new Error(`Token refresh failed: ${response.status}`);
+            throw new Error('Token refresh failed: ' + response.status);
         }
         
         const newToken = await response.json();
@@ -223,7 +223,7 @@ async function loadWeatherData() {
             return;
         }
         
-        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${CONFIG.WEATHER.CITY}&appid=${CONFIG.WEATHER.API_KEY}&units=${CONFIG.WEATHER.UNITS}`;
+        const weatherUrl = 'https://api.openweathermap.org/data/2.5/weather?q=' + CONFIG.WEATHER.CITY + '&appid=' + CONFIG.WEATHER.API_KEY + '&units=' + CONFIG.WEATHER.UNITS;
         console.log('Weather URL:', weatherUrl);
         
         console.log('Making weather API request...');
@@ -231,7 +231,7 @@ async function loadWeatherData() {
         console.log('Weather API response status:', response.status);
         
         if (!response.ok) {
-            throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
+            throw new Error('Weather API error: ' + response.status + ' ' + response.statusText);
         }
         
         const data = await response.json();
@@ -394,7 +394,7 @@ async function loadCalendarData() {
 }
 
 async function loadGoogleAPI() {
-    return new Promise((resolve, reject) => {
+    return new Promise(function(resolve, reject) {
         if (window.gapi && window.gapi.client) {
             // API already loaded, restore token if available
             restoreGoogleToken();
@@ -405,15 +405,15 @@ async function loadGoogleAPI() {
         // Load Google API
         const script = document.createElement('script');
         script.src = 'https://apis.google.com/js/api.js';
-        script.onload = () => {
-            window.gapi.load('client', () => {
+        script.onload = function() {
+            window.gapi.load('client', function() {
                 window.gapi.client.init({
                     apiKey: CONFIG.GOOGLE.API_KEY,
                     discoveryDocs: [
                         'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
                         'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'
                     ]
-                }).then(() => {
+                }).then(function() {
                     // Restore token after API is initialized
                     restoreGoogleToken();
                     resolve();
@@ -458,7 +458,7 @@ async function signInToGoogle() {
             client_id: CONFIG.GOOGLE.CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly',
             prompt: 'consent', // Force consent to get refresh token
-            callback: async (response) => {
+            callback: async function(response) {
                 if (response.error) {
                     console.error('Sign-in error:', response.error);
                     return;
@@ -918,19 +918,19 @@ async function loadTasksData() {
 async function getTodoistTasks() {
     try {
         const url = CONFIG.TODOIST.PROJECT_ID 
-            ? `${CONFIG.TODOIST.API_URL}tasks?project_id=${CONFIG.TODOIST.PROJECT_ID}`
-            : `${CONFIG.TODOIST.API_URL}tasks`;
+            ? CONFIG.TODOIST.API_URL + 'tasks?project_id=' + CONFIG.TODOIST.PROJECT_ID
+            : CONFIG.TODOIST.API_URL + 'tasks';
             
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${CONFIG.TODOIST.API_TOKEN}`,
+                'Authorization': 'Bearer ' + CONFIG.TODOIST.API_TOKEN,
                 'Content-Type': 'application/json'
             }
         });
         
         if (!response.ok) {
-            throw new Error(`Todoist API error: ${response.status}`);
+            throw new Error('Todoist API error: ' + response.status);
         }
         
         const data = await response.json();
@@ -1053,7 +1053,7 @@ function signOutFromGoogle() {
                     body: new URLSearchParams({
                         token: token.refresh_token
                     })
-                }).catch(error => {
+                }).catch(function(error) {
                     console.error('Error revoking refresh token:', error);
                 });
             }
