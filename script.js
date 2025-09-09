@@ -4,6 +4,9 @@
 // Initialize the dashboard
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Dashboard initializing...');
+    console.log('iOS 12 Compatibility:', window.ios12Compatibility);
+    console.log('Is iOS 12:', window.isIOS12);
+    
     updateDateTime();
     setInterval(updateDateTime, 1000); // Update every second
     
@@ -123,14 +126,24 @@ async function refreshGoogleToken() {
 // Restore Google token from localStorage
 async function restoreGoogleToken() {
     try {
+        console.log('Attempting to restore Google token...');
         const storedToken = localStorage.getItem('google_access_token');
+        console.log('Stored token found:', !!storedToken);
+        
         if (storedToken) {
             const token = JSON.parse(storedToken);
+            console.log('Token data:', {
+                hasAccessToken: !!token.access_token,
+                hasRefreshToken: !!token.refresh_token,
+                expiresAt: token.expires_at,
+                currentTime: Date.now() / 1000
+            });
             
             // Check if token is still valid (not expired)
             if (token.expires_in && token.expires_at) {
                 const now = Date.now() / 1000;
                 if (now < token.expires_at) {
+                    console.log('Token is still valid, setting it');
                     // Token is still valid, set it
                     if (window.gapi && window.gapi.client) {
                         window.gapi.client.setToken(token);
@@ -152,8 +165,10 @@ async function restoreGoogleToken() {
             }
             
             // Token is expired and couldn't be refreshed, remove it
+            console.log('Removing expired token');
             localStorage.removeItem('google_access_token');
         }
+        console.log('No valid token found, showing sign-in prompt');
         updateSignOutButton(false);
     } catch (error) {
         console.error('Error restoring Google token:', error);
@@ -194,26 +209,33 @@ async function loadWeatherData() {
     
     try {
         console.log('Weather API Key:', CONFIG.WEATHER.API_KEY);
+        console.log('Weather City:', CONFIG.WEATHER.CITY);
+        console.log('Weather Units:', CONFIG.WEATHER.UNITS);
+        
         if (CONFIG.WEATHER.API_KEY === 'YOUR_OPENWEATHER_API_KEY') {
             weatherElement.innerHTML = `
                 <div class="error">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <p>Please configure your OpenWeatherMap API key in script.js</p>
+                    <p>Please configure your OpenWeatherMap API key in config.js</p>
                     <p><a href="https://openweathermap.org/api" target="_blank">Get your free API key here</a></p>
                 </div>
             `;
             return;
         }
         
-        const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?q=${CONFIG.WEATHER.CITY}&appid=${CONFIG.WEATHER.API_KEY}&units=${CONFIG.WEATHER.UNITS}`
-        );
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${CONFIG.WEATHER.CITY}&appid=${CONFIG.WEATHER.API_KEY}&units=${CONFIG.WEATHER.UNITS}`;
+        console.log('Weather URL:', weatherUrl);
+        
+        console.log('Making weather API request...');
+        const response = await fetch(weatherUrl);
+        console.log('Weather API response status:', response.status);
         
         if (!response.ok) {
-            throw new Error(`Weather API error: ${response.status}`);
+            throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
+        console.log('Weather data received:', data);
         displayWeather(data);
         
     } catch (error) {
@@ -222,7 +244,8 @@ async function loadWeatherData() {
             <div class="error">
                 <i class="fas fa-exclamation-triangle"></i>
                 <p>Failed to load weather data</p>
-                <p>${error.message}</p>
+                <p>Error: ${error.message}</p>
+                <p>Check console for details</p>
             </div>
         `;
     }
@@ -312,9 +335,12 @@ function getWindDirection(degrees) {
 
 // Google Calendar integration
 async function loadCalendarData() {
+    console.log('loadCalendarData called');
     const calendarElement = document.getElementById('calendar-info');
     
     try {
+        console.log('Google Client ID:', CONFIG.GOOGLE.CLIENT_ID);
+        
         if (CONFIG.GOOGLE.CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
             calendarElement.innerHTML = `
                 <div class="error">
@@ -326,13 +352,17 @@ async function loadCalendarData() {
             return;
         }
         
+        console.log('Checking Google API availability...');
         // Check if user is authenticated
         if (!window.gapi || !window.gapi.client) {
+            console.log('Google API not loaded, loading now...');
             await loadGoogleAPI();
         }
         
+        console.log('Checking authentication status...');
         // Check if user is signed in
         if (!window.gapi.client.getToken()) {
+            console.log('No authentication token found');
             calendarElement.innerHTML = `
                 <div class="error">
                     <i class="fas fa-sign-in-alt"></i>
@@ -345,7 +375,9 @@ async function loadCalendarData() {
             return;
         }
         
+        console.log('Authentication token found, loading calendar events...');
         const events = await getCalendarEvents();
+        console.log('Calendar events loaded:', events.length);
         displayCalendarEvents(events);
         
     } catch (error) {
@@ -354,7 +386,8 @@ async function loadCalendarData() {
             <div class="error">
                 <i class="fas fa-exclamation-triangle"></i>
                 <p>Failed to load calendar data</p>
-                <p>${error.message}</p>
+                <p>Error: ${error.message}</p>
+                <p>Check console for details</p>
             </div>
         `;
     }
@@ -394,8 +427,13 @@ async function loadGoogleAPI() {
 
 async function signInToGoogle() {
     try {
+        console.log('Sign-in initiated');
+        console.log('iOS 12 detected:', window.isIOS12);
+        
         // iOS 12 has issues with popup-based OAuth, so we'll use a different approach
         if (window.isIOS12) {
+            console.log('Using iOS 12 OAuth redirect flow');
+            
             // For iOS 12, redirect to Google OAuth instead of using popup
             const authUrl = 'https://accounts.google.com/oauth/authorize?' + 
                 'client_id=' + encodeURIComponent(CONFIG.GOOGLE.CLIENT_ID) +
@@ -404,6 +442,8 @@ async function signInToGoogle() {
                 '&response_type=code' +
                 '&access_type=offline' +
                 '&prompt=consent';
+            
+            console.log('OAuth URL:', authUrl);
             
             // Store the current page URL to return to after OAuth
             localStorage.setItem('oauth_return_url', window.location.href);
@@ -808,25 +848,34 @@ function displayCalendarEvents(events) {
 
 // Tasks integration (Todoist or Google Tasks)
 async function loadTasksData() {
+    console.log('loadTasksData called');
     const tasksElement = document.getElementById('tasks-info');
     
     try {
+        console.log('Todoist API Token:', CONFIG.TODOIST.API_TOKEN ? 'Configured' : 'Not configured');
+        console.log('Google Tasks Enabled:', CONFIG.GOOGLE_TASKS.ENABLED);
+        
         // Check if Todoist is configured
         if (CONFIG.TODOIST.API_TOKEN !== 'YOUR_TODOIST_API_TOKEN') {
+            console.log('Using Todoist API...');
             const tasks = await getTodoistTasks();
+            console.log('Todoist tasks loaded:', tasks.length);
             displayTasks(tasks);
             return;
         }
         
         // Fallback to Google Tasks if enabled
         if (CONFIG.GOOGLE_TASKS.ENABLED) {
+            console.log('Using Google Tasks API...');
             // Check if user is authenticated
             if (!window.gapi || !window.gapi.client) {
+                console.log('Google API not loaded for tasks, loading now...');
                 await loadGoogleAPI();
             }
             
             // Check if user is signed in
             if (!window.gapi.client.getToken()) {
+                console.log('No authentication token for tasks');
                 tasksElement.innerHTML = `
                     <div class="error">
                         <i class="fas fa-sign-in-alt"></i>
@@ -836,12 +885,15 @@ async function loadTasksData() {
                 return;
             }
             
+            console.log('Loading Google tasks...');
             const tasks = await getGoogleTasks();
+            console.log('Google tasks loaded:', tasks.length);
             displayTasks(tasks);
             return;
         }
         
         // No tasks service configured
+        console.log('No tasks service configured');
         tasksElement.innerHTML = `
             <div class="error">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -856,7 +908,8 @@ async function loadTasksData() {
             <div class="error">
                 <i class="fas fa-exclamation-triangle"></i>
                 <p>Failed to load tasks data</p>
-                <p>${error.message}</p>
+                <p>Error: ${error.message}</p>
+                <p>Check console for details</p>
             </div>
         `;
     }

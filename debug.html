@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Home Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+        
+        .debug-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .debug-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .debug-output {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🔍 Dashboard Debug</h1>
+        
+        <div class="debug-section">
+            <h3>Browser & iOS Info</h3>
+            <div id="browser-info"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>File Loading Status</h3>
+            <div id="file-status"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Token Status</h3>
+            <div id="token-status"></div>
+            <button class="button" onclick="clearTokens()">Clear All Tokens</button>
+            <button class="button" onclick="checkTokens()">Refresh Token Status</button>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Console Output</h3>
+            <div id="console-output" class="debug-output"></div>
+            <button class="button" onclick="clearConsole()">Clear Console</button>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Test Actions</h3>
+            <button class="button" onclick="testSignIn()">Test Sign In</button>
+            <button class="button" onclick="testTokenRefresh()">Test Token Refresh</button>
+            <button class="button" onclick="testGoogleAPI()">Test Google API</button>
+        </div>
+    </div>
+
+    <script src="ios12-compatibility.js"></script>
+    <script src="config.js"></script>
+    <script>
+        let consoleOutput = '';
+        
+        // Override console.log to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            consoleOutput += 'LOG: ' + args.join(' ') + '\n';
+            updateConsoleOutput();
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            consoleOutput += 'ERROR: ' + args.join(' ') + '\n';
+            updateConsoleOutput();
+            originalError.apply(console, args);
+        };
+        
+        function updateConsoleOutput() {
+            document.getElementById('console-output').textContent = consoleOutput;
+        }
+        
+        function clearConsole() {
+            consoleOutput = '';
+            updateConsoleOutput();
+        }
+        
+        function clearTokens() {
+            localStorage.removeItem('google_access_token');
+            sessionStorage.removeItem('google_access_token');
+            console.log('All tokens cleared');
+            checkTokens();
+        }
+        
+        function checkTokens() {
+            const token = localStorage.getItem('google_access_token');
+            const sessionToken = sessionStorage.getItem('google_access_token');
+            
+            let tokenInfo = 'localStorage: ' + (token ? 'Found' : 'Not found') + '\n';
+            tokenInfo += 'sessionStorage: ' + (sessionToken ? 'Found' : 'Not found') + '\n';
+            
+            if (token) {
+                try {
+                    const parsed = JSON.parse(token);
+                    tokenInfo += 'Access Token: ' + (parsed.access_token ? 'Yes' : 'No') + '\n';
+                    tokenInfo += 'Refresh Token: ' + (parsed.refresh_token ? 'Yes' : 'No') + '\n';
+                    tokenInfo += 'Expires At: ' + (parsed.expires_at ? new Date(parsed.expires_at * 1000).toLocaleString() : 'Unknown') + '\n';
+                    tokenInfo += 'Current Time: ' + new Date().toLocaleString() + '\n';
+                    tokenInfo += 'Is Expired: ' + (parsed.expires_at && Date.now() / 1000 > parsed.expires_at ? 'Yes' : 'No');
+                } catch (e) {
+                    tokenInfo += 'Error parsing token: ' + e.message;
+                }
+            }
+            
+            document.getElementById('token-status').innerHTML = '<pre>' + tokenInfo + '</pre>';
+        }
+        
+        function testSignIn() {
+            console.log('Testing sign-in flow...');
+            if (window.isIOS12) {
+                console.log('iOS 12 detected - would use redirect flow');
+            } else {
+                console.log('Modern browser - would use popup flow');
+            }
+        }
+        
+        function testTokenRefresh() {
+            console.log('Testing token refresh...');
+            if (typeof refreshGoogleToken === 'function') {
+                refreshGoogleToken().then(result => {
+                    console.log('Token refresh result:', result);
+                }).catch(error => {
+                    console.error('Token refresh error:', error);
+                });
+            } else {
+                console.log('refreshGoogleToken function not available');
+            }
+        }
+        
+        function testGoogleAPI() {
+            console.log('Testing Google API...');
+            if (window.gapi) {
+                console.log('Google API loaded');
+                if (window.gapi.client) {
+                    console.log('Google API client available');
+                } else {
+                    console.log('Google API client not available');
+                }
+            } else {
+                console.log('Google API not loaded');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Browser info
+            const browserInfo = `
+User Agent: ${navigator.userAgent}
+iOS Version: ${window.ios12Compatibility ? 
+    window.ios12Compatibility.version.major + '.' + 
+    window.ios12Compatibility.version.minor + '.' + 
+    window.ios12Compatibility.version.patch : 'Unknown'}
+Is iOS 12: ${window.isIOS12 ? 'Yes' : 'No'}
+Compatibility Layer: ${window.ios12Compatibility ? 'Loaded' : 'Not loaded'}
+            `;
+            document.getElementById('browser-info').innerHTML = '<pre>' + browserInfo + '</pre>';
+            
+            // File status
+            const fileStatus = `
+ios12-compatibility.js: ${typeof window.ios12Compatibility !== 'undefined' ? 'Loaded' : 'Not loaded'}
+config.js: ${typeof window.CONFIG !== 'undefined' ? 'Loaded' : 'Not loaded'}
+Google GSI: ${typeof google !== 'undefined' ? 'Loaded' : 'Not loaded'}
+            `;
+            document.getElementById('file-status').innerHTML = '<pre>' + fileStatus + '</pre>';
+            
+            // Initial token check
+            checkTokens();
+            
+            console.log('Debug page loaded');
+        });
+    </script>
+</body>
+</html>
