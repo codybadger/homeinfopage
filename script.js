@@ -363,7 +363,22 @@ async function loadCalendarData() {
         // Check if user is authenticated
         if (!window.gapi || !window.gapi.client) {
             console.log('Google API not loaded, loading now...');
-            await loadGoogleAPI();
+            try {
+                await loadGoogleAPI();
+            } catch (error) {
+                console.error('Failed to load Google API:', error);
+                calendarElement.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Failed to load Google API</p>
+                        <p>Error: ${error.message}</p>
+                        <button onclick="signInToGoogle()" class="nav-button" style="margin-top: 10px;">
+                            <i class="fas fa-sign-in-alt"></i> Try Sign In
+                        </button>
+                    </div>
+                `;
+                return;
+            }
         }
         
         console.log('Checking authentication status...');
@@ -402,29 +417,36 @@ async function loadCalendarData() {
 
 async function loadGoogleAPI() {
     return new Promise(function(resolve, reject) {
-        if (window.gapi && window.gapi.client) {
-            // API already loaded, restore token if available
-            restoreGoogleToken();
-            resolve();
-            return;
+        // Wait for Google API to be available
+        function waitForGoogleAPI() {
+            if (window.gapi && window.gapi.load) {
+                console.log('Google API is ready, initializing...');
+                window.gapi.load('client:auth2', function() {
+                    window.gapi.client.init({
+                        apiKey: CONFIG.GOOGLE.API_KEY,
+                        clientId: CONFIG.GOOGLE.CLIENT_ID,
+                        discoveryDocs: [
+                            'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
+                            'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'
+                        ],
+                        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly'
+                    }).then(function() {
+                        console.log('Google API initialized successfully');
+                        // Restore token after API is initialized
+                        restoreGoogleToken();
+                        resolve();
+                    }).catch(function(error) {
+                        console.error('Google API initialization failed:', error);
+                        reject(error);
+                    });
+                });
+            } else {
+                console.log('Waiting for Google API to load...');
+                setTimeout(waitForGoogleAPI, 100);
+            }
         }
         
-        // Load Google API with auth2 support
-        window.gapi.load('client:auth2', function() {
-            window.gapi.client.init({
-                apiKey: CONFIG.GOOGLE.API_KEY,
-                clientId: CONFIG.GOOGLE.CLIENT_ID,
-                discoveryDocs: [
-                    'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
-                    'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'
-                ],
-                scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly'
-            }).then(function() {
-                // Restore token after API is initialized
-                restoreGoogleToken();
-                resolve();
-            }).catch(reject);
-        });
+        waitForGoogleAPI();
     });
 }
 
