@@ -23,7 +23,11 @@ document.addEventListener('DOMContentLoaded', function() {
 async function storeGoogleToken(tokenResponse) {
     try {
         const tokenWithExpiry = {
-            ...tokenResponse,
+            access_token: tokenResponse.access_token,
+            refresh_token: tokenResponse.refresh_token,
+            expires_in: tokenResponse.expires_in,
+            token_type: tokenResponse.token_type,
+            scope: tokenResponse.scope,
             expires_at: (Date.now() / 1000) + (tokenResponse.expires_in || 3600),
             stored_at: Date.now() / 1000
         };
@@ -95,8 +99,11 @@ async function refreshGoogleToken() {
         
         // Store the new token (preserving the refresh token)
         const updatedToken = {
-            ...newToken,
+            access_token: newToken.access_token,
             refresh_token: token.refresh_token, // Preserve the refresh token
+            expires_in: newToken.expires_in,
+            token_type: newToken.token_type,
+            scope: newToken.scope,
             expires_at: (Date.now() / 1000) + (newToken.expires_in || 3600),
             stored_at: Date.now() / 1000
         };
@@ -611,7 +618,7 @@ async function getCalendarEvents() {
                     event.calendarColor = getCalendarColor(calendarId);
                 });
                 
-                allEvents.push(...filteredEvents);
+                allEvents.push.apply(allEvents, filteredEvents);
             } catch (error) {
                 console.error(`Failed to load events from calendar ${calendarId}:`, error);
                 // Try to get more specific error information
@@ -718,12 +725,16 @@ function displayCalendarEvents(events) {
             if (currentDate >= today) {
                 // Create a copy of the event for this day
                 const dayEvent = {
-                    ...event,
+                    id: event.id,
+                    summary: event.summary,
+                    description: event.description,
                     start: {
-                        ...event.start,
                         dateTime: event.start.dateTime ? new Date(currentDate.getTime() + (startDate.getHours() * 60 + startDate.getMinutes()) * 60000).toISOString() : undefined,
                         date: event.start.dateTime ? undefined : currentDate.toISOString().split('T')[0]
-                    }
+                    },
+                    end: event.end,
+                    calendarName: event.calendarName,
+                    calendarColor: event.calendarColor
                 };
                 
                 expandedEvents.push(dayEvent);
@@ -990,7 +1001,7 @@ function displayTasks(tasks) {
     const tasksHtml = tasks.map(function(task) {
         // Handle different task formats (Todoist vs Google Tasks)
         const title = task.content || task.title || task.name;
-        const dueDate = task.due?.date || task.dueDate || task.due;
+        const dueDate = (task.due && task.due.date) || task.dueDate || task.due;
         const isCompleted = task.completed || task.status === 'completed';
         const priority = task.priority || 0;
         
